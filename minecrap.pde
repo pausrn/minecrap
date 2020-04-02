@@ -1,7 +1,6 @@
 /*
-- l angle de la camera l/r est maintenant linmité entre -pi et pi
-- il y a un tableau de PShape dans le chunk manager pour chaque chunk (bof perf --)
-- changement du calcul de pour savoir si un chunk est dans le champ de vision (marche toujours pas de ouf)
+- les chunks on maintenant chacun leurs PShape et sont translatés seulement lors d une update
+- en gros la meme version que la v0.8
 */
 
 import java.awt.Robot;
@@ -28,8 +27,8 @@ final int DOWNWARD=106;
 inputManager im;
 
 void setup() {
-  fullScreen(P3D);
-  //size(500, 500, P3D);
+  //fullScreen(P3D);
+  size(500, 500, P3D);
   
   //textureMode(NORMAL);
   noSmooth();
@@ -46,7 +45,7 @@ void setup() {
   p=new player();
   p.moveTo(0, 0, 0);
   
-  cm=new chunkManager(blocks,p,5);
+  cm=new chunkManager(blocks,p,10);
   
   p.cm=cm;
   
