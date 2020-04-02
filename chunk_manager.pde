@@ -14,7 +14,7 @@ class chunkManager{
 
     renderDist=rd;
     int area=0;
-    for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist) area++;
+    for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<=sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist) area++;
     println(area);
     chunk=new chunk[area];
     chunkCoords=new int[2*rd][2*rd];
@@ -28,19 +28,8 @@ class chunkManager{
     else chunkCoords[x+rd][y+rd]=-1;
   }
 
-  void loadAllChunks(){
-
-  }
-
-  void createChunkShape(){
-    for(int i=0;i<chunk.length;i++) chunk[i].createRenderShape(px,py);
-  }
-
   void renderShape(){
-    pushMatrix();
-    translate(px*16,0,py*16);
     for(int i=0;i<chunk.length;i++) if(chunk[i]!=null&&chunk[i].isRendered.get()) shape(chunk[i].renderShape);
-    popMatrix();
   }
 
   void updateChunk(){
@@ -48,16 +37,59 @@ class chunkManager{
     int cy=floor(p.z/16);
     if(cx!=px||cy!=py){
       //for(int i=0;i<chunk.length;i++) chunk[i].renderShape.translate((cx-px)*16,0,(cy-py)*16);
+      int depX=cx-px;
+      int depY=cy-py;
+      
       px=cx;
       py=cy;
+      
+      println(depX,depY);
+      
+      int[] chunkRequests=new int[chunk.length];
+      int[] chunkToRender=new int[0];
+      for(int i=0;i<chunkRequests.length;i++) chunkRequests[i]=-1;
+      for(int i=0;i<chunk.length;i++){
+        int x=chunk[i].chunkX;
+        int y=chunk[i].chunkY;
+        
+        int nx=x+depX;
+        int ny=y+depY;
+        
+        int nChunkInd=getChunkIndex(nx,ny);
+        
+        if(nChunkInd==-1) chunkToRender=append(chunkToRender,i);
+        else chunkRequests[nChunkInd]=i;
+      }
+      for(int i=0;i<chunkRequests.length;i++){
+        int ind=i;
+        int chainOfRequests[]=new int[0];
+        while(chunkRequests[ind]!=-1){
+          chainOfRequests=append(chainOfRequests,ind);
+          ind=chunkRequests[ind];
+          if(ind==chunkRequests[ind]){
+            break;
+          }
+        }
+        
+        for(int j=chainOfRequests.length-1;j>=0;j--){
+          int cInd=chunkRequests[chainOfRequests[j]];
+          //chunk[cInd]=chunk[chainOfRequests[j]];
+          chunk[cInd].copyFrom(chunk[chainOfRequests[j]]);
+          chunkRequests[chainOfRequests[j]]=-1;
+        }
+      }
+      for(int i=0;i<chunkToRender.length;i++){
+        int ind=chunkToRender[i];
+        chunk[ind]=new chunk(this,blocks,chunk[ind].chunkX,chunk[ind].chunkY,chunk[ind].px,chunk[ind].py);
+        chunk[ind].moveTo(depX,depY);
+        chunk[ind].startThread();
+      }
+      for(int i=0;i<chunk.length;i++) appendToFile(sketchPath("chunkPosTest"),chunk[i].px/16+":"+chunk[i].py/16+" : "+getChunkIndex(chunk[i].chunkX,chunk[i].chunkY));
     }
   }
 
   void chunkLoadingFinished(chunk c){
     int ind=getChunkIndex(c.chunkX,c.chunkY);
-    //while(ind<chunk.length-2&&chunk[ind+1].loadThread!=null) ind++;
-    //if(ind<chunk.length-1) chunk[ind+1].startThread();
-    //else println("fini"+millis());
     for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++){
       int ax=x+c.chunkX;
       int ay=y+c.chunkY;

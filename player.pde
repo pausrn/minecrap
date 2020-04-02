@@ -8,24 +8,24 @@ class player {
   player() {
 
   }
-
+  
+  void moveTo(float x, float y, float z) {
+    this.x=x;
+    this.y=y;
+    this.z=z;
+  }
+  
   void move(float x, float y, float z) {
     this.x+=x;
     this.y+=y;
     this.z+=z;
   }
 
-  void moveTo(float x, float y, float z) {
-    this.x=x;
-    this.y=y;
-    this.z=z;
-  }
-
   void walk(float[] moves) {
     if (moves!=null) {
       moves[0]+=lr;
       p.move(-speed*cos(moves[1])*sin(moves[0]), -speed*sin(moves[1]), -speed*cos(moves[1])*cos(moves[0]));
-      //cm.updateChunk();
+      cm.updateChunk();
     }
   }
 }

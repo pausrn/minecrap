@@ -1,5 +1,12 @@
 /*
-- génération de terrain basique
+- changement du sens des coordonnées en y pour etre en accord avec la camera (y positif vers le haut)
+- le tableau renderBlock est maintenant créer seulement lors de la création du shape pour gagner un peu de ram (on devrat peut etre le rechanger plus tard)
+- génération de monde infini :
+  - ajout de la fonction copyFrom et d'un nouveau constructeur dans la class chunk pour permettre de bouger les chunks qui sont affichés
+  - réinitialisation des variables isLoaded, isrendering et isRendered lors du lancement d'un thread pour permettre de relancer un thread d un chunk déjà loadé
+  - suppression du translate dans le renderShape, les chunks sont generés avec les bonnes coords
+  - amelioration de la fonction updateChunk dans la class chunkManager pour shifter les chunks et génerer les nouveaux
+- leger changement du mouvement de la camera avec la souris pour eviter le bug qui fait voir le ciel si on regarde a ses pieds
 */
 
 import java.awt.Robot;
@@ -15,38 +22,19 @@ Robot r;
 int windowX, windowY;
 float sensi=0.01;
 
-float[] movement=new float[2];
-int[] movementNb=new int[2];
-
-final int FORWARD=103;
-final int BACKWARD=104;
-final int UPWARD=105;
-final int DOWNWARD=106;
+inputManager im;
 
 boolean once=true;
 
-inputManager im;
-
 void setup() {
-  //fullScreen(P3D);
-  size(500, 500, P3D);
-
-  //textureMode(NORMAL);
-  noSmooth();
-  hint(DISABLE_TEXTURE_MIPMAPS);
+  fullScreen(P3D);
+  //size(500, 500, P3D);
 
   frameRate(1000);
   noCursor();
 
   float cameraZ=((height/2.0) / tan(PI*60.0/360.0));
   perspective(PI/3.0, (float)width/height, 0.1/*cameraZ/10.0*/, cameraZ*10.0);
-
-  blocks=loadBlocks("blocksData.json");
-
-  p=new player();
-  p.moveTo(0, 0, 0);
-
-  im=new inputManager(p);
 
   PGraphicsOpenGL gl=((PGraphicsOpenGL)g);
   gl.textureSampling(2);
@@ -55,29 +43,33 @@ void setup() {
   windowX=win.getX();
   windowY=win.getY();
 
+  blocks=loadBlocks("blocksData.json");
+
+  p=new player();
+  p.moveTo(5, 200, 5);
+  
+  cm=new chunkManager(blocks,p,10);
+    
+  p.cm=cm;
+  
+  im=new inputManager(p);
+
   try {
     r=new Robot();
   }
   catch(AWTException e) {
     e.printStackTrace();
   }
-  
-  //cm.createChunkShape();
 }
 
 void draw() {
-  if(once){
-    cm=new chunkManager(blocks,p,10);
-    
-    p.cm=cm;
-    once=false;
-  }
-  
   background(255);
 
-  //directionalLight(255,255,200, -0.5, 1, -.1);
+  camera(p.x, -p.y-1, p.z, p.x-sin(p.lr)*cos(p.ud), -p.y-1-sin(p.ud), p.z-cos(p.lr)*cos(p.ud), 0, 1, 0);
 
-  camera(p.x, p.y-1, p.z, p.x-sin(p.lr)*cos(p.ud), p.y-1-sin(p.ud), p.z-cos(p.lr)*cos(p.ud), 0, 1, 0);
+  //directionalLight(255,255,200, -0.5, 1, -0.1);
+
+  //pointLight(50,50,50,p.x, p.y-1, p.z);
 
   beginShape(LINES);
   stroke(255, 0, 0);
@@ -121,8 +113,11 @@ void mouseMoved(MouseEvent e) {
     p.lr=(p.lr-(mouseX-pmouseX)*sensi);//map(mouseX,0,width,-PI,PI);
     if(p.lr>PI) p.lr-=TWO_PI;
     if(p.lr<-PI) p.lr+=TWO_PI;
-    p.ud=constrain(p.ud-(mouseY-pmouseY)*sensi,-HALF_PI,HALF_PI);//map(mouseY,height,0,-HALF_PI,HALF_PI);
-  } else resettingMouse=false;
+    p.ud-=(mouseY-pmouseY)*sensi;
+    if(p.ud<=-HALF_PI) p.ud=-HALF_PI+0.01;
+    if(p.ud>HALF_PI) p.ud=HALF_PI;
+  }
+  else resettingMouse=false;
   if (mouseX<width/4||mouseX>width/4*3||mouseY<height/4||mouseY>height/4*3) {
     r.mouseMove(windowX+width/2, windowY+height/2);
     resettingMouse=true;
