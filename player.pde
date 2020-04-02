@@ -1,8 +1,8 @@
 class player{
   float x,y,z;
-  int rx,ry,rz;
-  float lr,ud;
-  float speed=0.1;
+  float fov=PI/3.0;
+  float lr=0,ud=0;
+  float speed=0.5;
   
   player(){
     
@@ -12,19 +12,11 @@ class player{
     this.x+=x;
     this.y+=y;
     this.z+=z;
-    
-    rx+=round(x*100);
-    ry+=round(y*100);
-    rz+=round(z*100);
   }
   
   void moveTo(float x,float y,float z){
     this.x=x;
     this.y=y;
     this.z=z;
-    
-    rx=round(x*100);
-    ry=round(y*100);
-    rz=round(z*100);
   }
 }
