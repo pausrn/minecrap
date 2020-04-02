@@ -1,19 +1,17 @@
 /*
-- cleanup de toutes les lignes inutiles
-- debut de la class chunk manager (elle est quasi vide et sert a rien pour l instant)
-- en gros c est quasi la version 0.3
+- ajout du tableau des faces a render dans la class block pour eviter de les recalculer a chaque frame
+- ajout de la class chunkLoader pour generer/loader les chunk dans un thread different du thread de render
+  --> ajout de la fonction render dans la class chunk
+- ajout de la class chunkManager pour controler le tableau de chunk autour du joueur (load/render)
+- suppression de la distinction entre coordonnées dans le monde et coordonnes de render dans la class player (inutile depuis la v0.3)
 */
 
 import java.awt.Robot;
 import java.awt.AWTException;
 import com.jogamp.newt.opengl.GLWindow;
 
-//import peasy.PeasyCam;
-
-//PeasyCam cam;
-
 block[] blocks;
-chunk c;
+chunkManager cm;
 
 player p;
 
@@ -31,11 +29,19 @@ final int DOWNWARD=106;
 void setup() {
   fullScreen(P3D);
   //size(500, 500, P3D);
+  
   frameRate(1000);
   noCursor();
-
+  
+  float cameraZ=((height/2.0) / tan(PI*60.0/360.0));
+  perspective(PI/3.0, (float)width/height, 0.1/*cameraZ/10.0*/, cameraZ*10.0);
+  
   blocks=loadBlocks("blocksData.json");
-  c=new chunk(blocks);
+  
+  p=new player();
+  p.moveTo(0, 0, 0);
+  
+  cm=new chunkManager(blocks,p,3);
 
   PGraphicsOpenGL gl=((PGraphicsOpenGL)g);
   gl.textureSampling(3);
@@ -50,13 +56,6 @@ void setup() {
   catch(AWTException e) {
     e.printStackTrace();
   }
-
-  p=new player();
-  p.moveTo(0, 0, 0);
-  //cam = new PeasyCam(this, 400);
-  float cameraZ=((height/2.0) / tan(PI*60.0/360.0));
-  ;
-  perspective(PI/3.0, (float)width/height, 0.1/*cameraZ/10.0*/, cameraZ*10.0);
 }
 void draw() {
   background(255);
@@ -99,7 +98,8 @@ void draw() {
   noStroke();
   //stroke(0);
   noFill();
-  c.render(p);
+  cm.render();
+  //p.lr=(p.lr+0.01)%TWO_PI;
 
   fill(0);
   camera();
@@ -107,7 +107,7 @@ void draw() {
   noLights();
   textMode(MODEL);
   textSize(20);
-  text(frameRate+"\n"+p.x+";"+p.y+";"+p.z, 10, 10 + textAscent());
+  text(frameRate+"\n"+p.x+";"+p.y+";"+p.z+"\n"+p.lr+";"+p.ud, 10, 10 + textAscent());
   //text(p.x+";"+p.y+";"+p.z,10,35);
   hint(ENABLE_DEPTH_TEST);
 }
@@ -183,8 +183,8 @@ int[] rmEl(int[] array, int ind) {
 boolean resettingMouse=false;
 void mouseMoved(MouseEvent e) {
   if (!resettingMouse) {
-    p.lr+=(mouseX-pmouseX)*sensi;//map(mouseX,0,width,-PI,PI);
-    p.ud-=(mouseY-pmouseY)*sensi;//map(mouseY,height,0,-HALF_PI,HALF_PI);
+    p.lr=(p.lr+(mouseX-pmouseX)*sensi)%PI;//map(mouseX,0,width,-PI,PI);
+    p.ud=(p.ud-(mouseY-pmouseY)*sensi)%PI;//map(mouseY,height,0,-HALF_PI,HALF_PI);
   } else resettingMouse=false;
   if (mouseX<width/4||mouseX>width/4*3||mouseY<height/4||mouseY>height/4*3) {
     r.mouseMove(windowX+width/2, windowY+height/2);

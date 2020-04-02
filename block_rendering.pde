@@ -70,37 +70,49 @@ int[][] order={
 
 class chunk {
   int[][][] blocksData=new int[16][256][16];
+  int[][][][] renderBlocks;
   block[] blocks;
+  chunkLoader cLoad;
+  Thread loadThread;
+  int px,py;
 
-  chunk(block[] blocks) {
+  chunk(block[] blocks,int px,int py) {
     //for(int y=0;y<16;y++) for(int z=0;z<16;z++) blocksData[15][y][z]=1;
     //blocksData[10][10][15]=1;
     //for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) blocksData[x+10][y+10][14]=1;
     //blocksData[1][0][0]=1;
     //for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) for(int z=-1;z<=1;z++) blocksData[10+x][10+y][10+z]=1;
-    for (int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData.length; y++) for (int z=0; z<blocksData[0][0].length; z++) blocksData[x][y][z]=(int)random(0,3);
+    //for (int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData.length; y++) for (int z=0; z<blocksData[0][0].length; z++) blocksData[x][y][z]=(int)random(0,3);
     this.blocks=blocks;
+    this.renderBlocks=new int[blocks.length-1][0][2][];
+    this.px=px;
+    this.py=py;
+    cLoad=new chunkLoader(this);
   }
   
-  void render(player p) {
+  void render() {
     for(int i=0;i<blocks.length-1;i++){
       beginShape(QUADS);
       texture(blocks[i].merged);
-      for (int x=0; x<blocksData.length; x++) {
+      for(int j=0;j<renderBlocks[i].length;j++){
+        int[] pos=renderBlocks[i][j][0];
+        blocks[i].draw(pos[0]+px,pos[1],pos[2]+py,renderBlocks[i][j][1]);
+      }
+      /*for (int x=0; x<blocksData.length; x++) {
         for (int y=0; y<blocksData[0].length; y++) {
           for (int z=0; z<blocksData[0][0].length; z++) {
             if(blocksData[x][y][z]==i+1){
-              int[] faces=shouldRender(x, y, z,p);
-              blocks[i].draw(x,y,z,faces);
+              int[] faces=shouldRender(x, y, z);
+              blocks[i].draw(x+px,y,z+py,faces);
             }
           }
         }
-      }
+      }*/
       endShape();
     }
   }
 
-  int[] shouldRender(int ox, int oy, int oz,player p){
+  int[] shouldRender(int ox, int oy, int oz){
     int[] tempFaces=new int[6];
     int ind=0;
     
@@ -120,60 +132,63 @@ class chunk {
     return facesToRender;
   }
   
-  boolean rayToPlayer(int ox,int oy,int oz,int faceId,player p){
-    boolean hitBlock=false;
-    for(int j=0;j<boxCoords[faceId].length;j+=3){
-      int vx=ox+boxCoords[faceId][j];
-      int vy=oy+boxCoords[faceId][j+1];
-      int vz=oz+boxCoords[faceId][j+2];
-      
-      float x=p.x-vx;
-      float y=p.y-1-vy;
-      float z=p.z-vz;
-      
-      float rad=sqrt(sq(x)+sq(y)+sq(z));
-      float theta=atan2(x,z);
-      float omega=atan2(sqrt(sq(x)+sq(z)),y);
-      
-      float coeffX=sin(theta)*sin(omega);
-      float coeffY=cos(omega);
-      float coeffZ=cos(theta)*sin(omega);
-      
-      thisRay:
-      for(int d=1;d<rad;d++){
-        int cx=vx+floor(coeffX*d);
-        int cy=vy+floor(coeffY*d);
-        int cz=vz+floor(coeffZ*d);
-        while(cx==ox&&cy==oy&&cz==oz){
-          d++;
-          if(d>rad){
-            break thisRay;
-          }
-          cx=vx+floor(coeffX*d);
-          cy=vy+floor(coeffY*d);
-          cz=vz+floor(coeffZ*d);
-        }
-        
-        if(!isIn(cx,0,blocksData.length)||!isIn(cy,0,blocksData[0].length)||!isIn(cz,0,blocksData[0][0].length)){
-          return true;
-        }
-        if(blocksData[cx][cy][cz]!=0){
-          hitBlock=true;
-          break;
-        }
-      }
+  void generate(){
+    for(int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData.length; y++) for (int z=0; z<blocksData[0][0].length; z++) blocksData[x][y][z]=1;//(int)random(0,3);
+    for(int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData[0].length; y++) for (int z=0; z<blocksData[0][0].length; z++) if(blocksData[x][y][z]!=0){
+      int[] faces=shouldRender(x,y,z);
+      renderBlocks[blocksData[x][y][z]-1]=(int[][][])append(renderBlocks[blocksData[x][y][z]-1],new int[][]{new int[]{x,y,z},faces});
     }
-    if(!hitBlock) return true;
-    return false;
+  }
+}
+
+class chunkLoader implements Runnable{
+  chunk c;
+  
+  chunkLoader(chunk c){
+    this.c=c;
+  }
+  
+  void run(){
+    c.generate();
   }
 }
 
 class chunkManager{
-  chunk[] chunks;
+  chunk[] chunk;
+  block[] blocks;
+  player p;
+  int[][] chunkCoords;
   int renderDist=3;
   
-  chunkManager(){
+  chunkManager(block[] blocks,player p,int rd){
+    this.blocks=blocks;
+    this.p=p;
     
+    renderDist=rd;
+    int area=0;
+    for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist) area++;
+    chunk=new chunk[area];
+    chunkCoords=new int[2*rd][2*rd];
+    int ind=0;
+    for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist){
+      chunkCoords[x+rd][y+rd]=ind;
+      chunk[ind]=new chunk(blocks,x*16,y*16);
+      chunk[ind].loadThread=new Thread(chunk[ind].cLoad);
+      chunk[ind].loadThread.start();
+      ind++;
+    }
+  }
+  
+  void render(){
+    for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
+      chunk cc=chunk[chunkCoords[x][y]];
+      if(isInView(cc)) cc.render();
+    }
+  }
+  
+  boolean isInView(chunk c){
+    float ang=TWO_PI-(atan2((c.py+8),-(c.px+8))+PI);
+    return (ang>(p.lr-p.fov)%TWO_PI&&ang<(p.lr+p.fov)%TWO_PI);
   }
 }
 
