@@ -33,7 +33,7 @@ class block {
     for (int i=0; i<facesToRender.length; i++) {
       int faceId=facesToRender[i];
       //pushMatrix();
-      beginShape();
+      beginShape(QUAD);
       if (faceId<4) texture(this.sides);
       else if (faceId==4) texture(this.bottom);
       else if (faceId==5) texture(this.up);
@@ -63,8 +63,9 @@ class chunck {
   block[] blocks;
 
   chunck(block[] blocks) {
-    //blocksData[15][10][10]=1;
-    //blocksData[14][0][10]=1;
+    //for(int y=0;y<16;y++) for(int z=0;z<16;z++) blocksData[15][y][z]=1;
+    //blocksData[10][10][15]=1;
+    //for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) blocksData[x+10][y+10][14]=1;
     //blocksData[1][0][0]=1;
     //for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) for(int z=-1;z<=1;z++) blocksData[10+x][10+y][10+z]=1;
     for (int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData.length; y++) for (int z=0; z<blocksData[0][0].length; z++) blocksData[x][y][z]=(int)random(0,3);
@@ -127,33 +128,37 @@ class chunck {
       float rad=sqrt(sq(x)+sq(y)+sq(z));
       float theta=atan2(x,z);
       float omega=atan2(sqrt(sq(x)+sq(z)),y);
-      //println("aaa"+p.x,p.y,p.z,vx,vy,vz,x,y,z,rad);
+      
+      float coeffX=sin(theta)*sin(omega);
+      float coeffY=cos(omega);
+      float coeffZ=cos(theta)*sin(omega);
+      //if(oz==15) println("aaa"+p.x,p.y,p.z,vx,vy,vz,x,y,z,rad);
       //println(floor(sin(theta)*sin(omega)*rad),floor(cos(theta)*sin(omega)*rad),x,z);
       
       thisRay:
       for(int d=1;d<rad;d++){
-        int cx=vx+floor(sin(theta)*sin(omega)*d);
-        int cy=vy+floor(cos(omega)*d);
-        int cz=vz+floor(cos(theta)*sin(omega)*d);
+        int cx=vx+floor(coeffX*d);
+        int cy=vy+floor(coeffY*d);
+        int cz=vz+floor(coeffZ*d);
         while(cx==ox&&cy==oy&&cz==oz){
           d++;
           if(d>rad){
             break thisRay;
           }
-          cx=vx+floor(sin(theta)*sin(omega)*d);
-          cy=vy+floor(cos(omega)*d);
-          cz=vz+floor(cos(theta)*sin(theta)*d);
+          cx=vx+floor(coeffX*d);
+          cy=vy+floor(coeffY*d);
+          cz=vz+floor(coeffZ*d);
         }
         
-        //println(cx,cy,cz);
+        //if(oz==15) println(cx,cy,cz);
         
         if(!isIn(cx,0,blocksData.length)||!isIn(cy,0,blocksData[0].length)||!isIn(cz,0,blocksData[0][0].length)){
-          //println("out");
+          //if(oz==15) println("out");
           return true;
         }
         if(blocksData[cx][cy][cz]!=0){
           hitBlock=true;
-          //println("hit");
+          //if(oz==15) println("hit");
           break;
         }
       }
