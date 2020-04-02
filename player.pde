@@ -6,7 +6,7 @@ class player {
   chunkManager cm;
 
   player() {
-    
+
   }
 
   void move(float x, float y, float z) {
