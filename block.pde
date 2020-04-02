@@ -39,23 +39,6 @@ class block {
     this.name=name;
   }
 
-  void draw(int x,int y,int z,int[] facesToRender) {
-    for (int i=0; i<facesToRender.length; i++) {
-      int faceId=facesToRender[i];
-      int[] c=boxCoords[faceId];
-      for (int j=0; j<c.length; j+=3) {
-        vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceId][0]]<<4,c[j+coordsForMapping[faceId][1]]<<4);
-      }
-    }
-  }
-  
-  void draw(int x,int y,int z,int faceToRender) {
-    int[] c=boxCoords[faceToRender];
-    for (int j=0; j<c.length; j+=3) {
-      vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceToRender][0]]<<4,c[j+coordsForMapping[faceToRender][1]]<<4);
-    }
-  }
-  
   void draw(int x,int y,int z,int faceToRender,PShape shape) {
     int[] c=boxCoords[faceToRender];
     for (int j=0; j<c.length; j+=3) {
