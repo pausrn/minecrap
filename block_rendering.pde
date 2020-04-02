@@ -167,7 +167,7 @@ class chunkManager{
   int[][] chunkCoords;
   int renderDist=3;
   int px,py;
-  PShape chunkShape;
+  PShape[] chunkShapes;
   
   chunkManager(block[] blocks,player p,int rd){
     this.blocks=blocks;
@@ -179,6 +179,7 @@ class chunkManager{
     int area=0;
     for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist) area++;
     chunk=new chunk[area];
+    chunkShapes=new PShape[area];
     chunkCoords=new int[2*rd][2*rd];
     int ind=0;
     for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist){
@@ -212,10 +213,24 @@ class chunkManager{
   }
   
   void createChunkShape(){
-    chunkShape=createShape(GROUP);
+    for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
+      int ind=chunkCoords[x][y];
+      chunk cc=chunk[ind];
+      chunkShapes[ind]=createShape(GROUP);
+      chunkShapes[ind].disableStyle();
+      for(int blockId=0;blockId<blocks.length;blockId++) for(int faceId=0;faceId<boxCoords.length;faceId++){
+        PShape cchunk=createShape();
+        cchunk.setTexture(blocks[blockId].tex[faceId]);
+        cchunk.beginShape(QUADS);
+        cc.render(px<<4,py<<4,blockId,faceId,cchunk);
+        cchunk.endShape();
+        chunkShapes[ind].addChild(cchunk);
+      }
+    }
+    
+    /*chunkShape=createShape(GROUP);
     chunkShape.disableStyle();
     
-    int count=0;
     for(int blockId=0;blockId<blocks.length;blockId++){
       for(int faceId=0;faceId<boxCoords.length;faceId++){
         PShape cchunk=createShape();
@@ -223,17 +238,17 @@ class chunkManager{
         cchunk.beginShape(QUADS);
         for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
           chunk cc=chunk[chunkCoords[x][y]];
-          /*if(isInView(cc))*/ cc.render(px<<4,py<<4,blockId,faceId,cchunk);
+          cc.render(px<<4,py<<4,blockId,faceId,cchunk);
         }
         cchunk.endShape();
         chunkShape.addChild(cchunk);
       }
-    }
+    }*/
   }
   
   void renderShape(){
     translate(px<<4,0,py<<4);
-    shape(chunkShape);
+    for(int i=0;i<chunkShapes.length;i++) if(isInView(chunk[i])) shape(chunkShapes[i]);
   }
   
   void updateChunk(){
@@ -246,14 +261,21 @@ class chunkManager{
   }
   
   boolean isInView(chunk c){
-    float ang=PI-atan2((c.py+8-p.y),-(c.px+8-p.x))%PI;
-    float dist=abs(ang-p.lr)%PI;
+    float ang=HALF_PI+atan2((c.py+8-p.y),-(c.px+8-p.x))%PI;
     
+    if(angDif(ang,p.lr)<p.fov/2) return true;
     return false;
+    //return true;
     //return (ang>angMin&&ang<angMax);
   }
 }
 
 boolean isIn(int val,int min,int max){
   return val>=min&&val<max;
+}
+
+float angDif(float ang1,float ang2){
+  float diff=abs(ang1-ang2);
+  if(diff > PI) diff = TWO_PI-diff;
+  return diff;
 }
