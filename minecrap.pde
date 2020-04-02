@@ -1,9 +1,16 @@
 /*
-- ajout du tableau des faces a render dans la class block pour eviter de les recalculer a chaque frame
-- ajout de la class chunkLoader pour generer/loader les chunk dans un thread different du thread de render
-  --> ajout de la fonction render dans la class chunk
-- ajout de la class chunkManager pour controler le tableau de chunk autour du joueur (load/render)
-- suppression de la distinction entre coordonnées dans le monde et coordonnes de render dans la class player (inutile depuis la v0.3)
+- changement de la facon dont les mouvements sont gérés (coordonnées spheriques pour le mouvement a effectuer)
+  --> ajout de la class InputManager
+- essai pour faire disparaitre les espaces entre le bocks a distance (texture_sampling a 2 et mipmaps_disabled; changement des coords u/v)
+- ajout d'une lumiere directionnelle
+- changement des mouvements de camera pour eviter l inversion de sens en haut/bas
+- les chunks peuvent mnt etre render a une position
+- changement de l'offset pour verifier si un bloc doit etre dessiner (au bordure deux blocks etaient desinees au lieu d'un)
+- utilisation d'ArrayCopy au lieu d'une boucle for pour la creation des tableau facesToRender
+- le monde est maintenant infini
+  --> ajout d une pX et pY pour le chunkMananger
+  --> ajout de la fonction update chunk pour verifier si le joueur est sorti du chunk est le cas echeant modifier les chuunks loadés (actuellemtn la fonction translate juste les chunk pour etre au niveau du joueur)
+- changement de la fonction pour voir si un chunk doit etre render (marche toujours pas)
 */
 
 import java.awt.Robot;
@@ -19,16 +26,23 @@ Robot r;
 int windowX, windowY;
 float sensi=0.01;
 
-int[] movement=new int[0];
+float[] movement=new float[2];
+int[] movementNb=new int[2];
 
 final int FORWARD=103;
 final int BACKWARD=104;
 final int UPWARD=105;
 final int DOWNWARD=106;
 
+inputManager im;
+
 void setup() {
-  fullScreen(P3D);
-  //size(500, 500, P3D);
+  //fullScreen(P3D);
+  size(500, 500, P3D);
+  
+  //textureMode(NORMAL);
+  noSmooth();
+  hint(DISABLE_TEXTURE_MIPMAPS);
   
   frameRate(1000);
   noCursor();
@@ -42,9 +56,13 @@ void setup() {
   p.moveTo(0, 0, 0);
   
   cm=new chunkManager(blocks,p,3);
+  
+  p.cm=cm;
+  
+  im=new inputManager(p);
 
   PGraphicsOpenGL gl=((PGraphicsOpenGL)g);
-  gl.textureSampling(3);
+  gl.textureSampling(2);
 
   GLWindow win=(com.jogamp.newt.opengl.GLWindow)getSurface().getNative();
   windowX=win.getX();
@@ -57,49 +75,32 @@ void setup() {
     e.printStackTrace();
   }
 }
+
 void draw() {
   background(255);
+  
+  directionalLight(255,255,150, -0.5, 1, 0);
 
-  for (int i=0; i<movement.length; i++) switch(movement[i]) {
-  case FORWARD:
-    p.move(p.speed*cos(p.lr), 0, p.speed*sin(p.lr));
-    break;
-  case LEFT:
-    p.move(p.speed*sin(p.lr), 0, -p.speed*cos(p.lr));
-    break;
-  case RIGHT:
-    p.move(-p.speed*sin(p.lr), 0, p.speed*cos(p.lr));
-    break;
-  case BACKWARD:
-    p.move(-p.speed*cos(p.lr), 0, -p.speed*sin(p.lr));
-    break;
-  case UPWARD:
-    p.move(0, -p.speed, 0);
-    break;
-  case DOWNWARD:
-    p.move(0, p.speed, 0);
-    break;
-  }
-
-  camera(p.x, p.y-1, p.z, p.x+cos(p.lr), p.y-1-sin(p.ud), p.z+sin(p.lr), 0, 1, 0);
+  camera(p.x, p.y-1, p.z, p.x-sin(p.lr)*cos(p.ud), p.y-1-sin(p.ud), p.z-cos(p.lr)*cos(p.ud), 0, 1, 0);
 
   beginShape(LINES);
   stroke(255, 0, 0);
-  vertex(p.x+cos(p.lr), p.y-1-sin(p.ud), p.z+sin(p.lr));
-  vertex(p.x+cos(p.lr)+0.1, p.y-1-sin(p.ud), p.z+sin(p.lr));
+  vertex(p.x+sin(p.lr), p.y-1-sin(p.ud), p.z+cos(p.lr));
+  vertex(p.x+sin(p.lr)+0.1, p.y-1-sin(p.ud), p.z+cos(p.lr));
   stroke(0, 255, 0);
-  vertex(p.x+cos(p.lr), p.y-1-sin(p.ud), p.z+sin(p.lr));
-  vertex(p.x+cos(p.lr), p.y-1-sin(p.ud)+0.1, p.z+sin(p.lr));
+  vertex(p.x+sin(p.lr), p.y-1-sin(p.ud), p.z+cos(p.lr));
+  vertex(p.x+sin(p.lr), p.y-1-sin(p.ud)+0.1, p.z+cos(p.lr));
   stroke(0, 0, 255);
-  vertex(p.x+cos(p.lr), p.y-1-sin(p.ud), p.z+sin(p.lr));
-  vertex(p.x+cos(p.lr), p.y-1-sin(p.ud), p.z+sin(p.lr)+0.1);
+  vertex(p.x+sin(p.lr), p.y-1-sin(p.ud), p.z+cos(p.lr));
+  vertex(p.x+sin(p.lr), p.y-1-sin(p.ud), p.z+cos(p.lr)+0.1);
   endShape();
 
   noStroke();
   //stroke(0);
   noFill();
   cm.render();
-  //p.lr=(p.lr+0.01)%TWO_PI;
+  
+  p.walk(im.getAngs());
 
   fill(0);
   camera();
@@ -108,83 +109,21 @@ void draw() {
   textMode(MODEL);
   textSize(20);
   text(frameRate+"\n"+p.x+";"+p.y+";"+p.z+"\n"+p.lr+";"+p.ud, 10, 10 + textAscent());
-  //text(p.x+";"+p.y+";"+p.z,10,35);
   hint(ENABLE_DEPTH_TEST);
 }
 
-import java.awt.event.KeyEvent.*;
-
 void keyPressed() {
-  /*KeyEvent e=(java.awt.event.KeyEvent)event;
-   println("aaa"+event.isActionKey());*/
-  if (key==CODED) switch(keyCode) {
-  case SHIFT:
-    movement=append(movement, DOWNWARD);
-    break;
-  } else switch(Character.toLowerCase(key)) {
-  case 'z':
-    movement=append(movement, FORWARD);
-    break;
-  case 'q':
-    movement=append(movement, LEFT);
-    break;
-  case 's':
-    movement=append(movement, BACKWARD);
-    break;
-  case 'd':
-    movement=append(movement, RIGHT);
-    break;
-  case ' ':
-    movement=append(movement, UPWARD);
-    break;
-  }
+  im.keyPressed();
 }
 void keyReleased() {
-  if (key==CODED) switch(keyCode) {
-  case SHIFT:
-    movement=rmEl(movement, DOWNWARD);
-    break;
-  } else switch(Character.toLowerCase(key)) {
-  case 'z':
-    movement=rmEl(movement, FORWARD);
-    break;
-  case 'q':
-    movement=rmEl(movement, LEFT);
-    break;
-  case 's':
-    movement=rmEl(movement, BACKWARD);
-    break;
-  case 'd':
-    movement=rmEl(movement, RIGHT);
-    break;
-  case ' ':
-    movement=rmEl(movement, UPWARD);
-    break;
-  }
-}
-
-void keyEvent(KeyEvent ev) {
-  println(ev);
-}
-
-int[] rmAct(int[] array, int id) {
-  for (int i=0; i<array.length; i++) if (array[i]==id) {
-    return rmEl(array, i);
-  }
-  return array;
-}
-
-int[] rmEl(int[] array, int ind) {
-  for (int i=ind; i<array.length-1; i++) array[i]=array[i+1];
-  if (array.length>0) array=shorten(array);
-  return array;
+  im.keyReleased();
 }
 
 boolean resettingMouse=false;
 void mouseMoved(MouseEvent e) {
   if (!resettingMouse) {
-    p.lr=(p.lr+(mouseX-pmouseX)*sensi)%PI;//map(mouseX,0,width,-PI,PI);
-    p.ud=(p.ud-(mouseY-pmouseY)*sensi)%PI;//map(mouseY,height,0,-HALF_PI,HALF_PI);
+    p.lr=(p.lr-(mouseX-pmouseX)*sensi);//map(mouseX,0,width,-PI,PI);
+    p.ud=constrain(p.ud-(mouseY-pmouseY)*sensi,-HALF_PI,HALF_PI);//map(mouseY,height,0,-HALF_PI,HALF_PI);
   } else resettingMouse=false;
   if (mouseX<width/4||mouseX>width/4*3||mouseY<height/4||mouseY>height/4*3) {
     r.mouseMove(windowX+width/2, windowY+height/2);
