@@ -1,16 +1,9 @@
 /*
-- changement de la facon dont les mouvements sont gérés (coordonnées spheriques pour le mouvement a effectuer)
-  --> ajout de la class InputManager
-- essai pour faire disparaitre les espaces entre le bocks a distance (texture_sampling a 2 et mipmaps_disabled; changement des coords u/v)
-- ajout d'une lumiere directionnelle
-- changement des mouvements de camera pour eviter l inversion de sens en haut/bas
-- les chunks peuvent mnt etre render a une position
-- changement de l'offset pour verifier si un bloc doit etre dessiner (au bordure deux blocks etaient desinees au lieu d'un)
-- utilisation d'ArrayCopy au lieu d'une boucle for pour la creation des tableau facesToRender
-- le monde est maintenant infini
-  --> ajout d une pX et pY pour le chunkMananger
-  --> ajout de la fonction update chunk pour verifier si le joueur est sorti du chunk est le cas echeant modifier les chuunks loadés (actuellemtn la fonction translate juste les chunk pour etre au niveau du joueur)
-- changement de la fonction pour voir si un chunk doit etre render (marche toujours pas)
+- tout les chunks sont maintenant rassemblés dans un PShape
+  --> les class chunk et block permettent maintenant de render vers un PShape au lieu de la ffichage principal
+- on resepare les texture de chaques faces pour eviter le texture bleeding
+- changement de la facon dont le tableau renderBlock est stocké pour permettre d'iterer sur chaque face plutot que sur chaque block
+- 
 */
 
 import java.awt.Robot;
@@ -55,7 +48,7 @@ void setup() {
   p=new player();
   p.moveTo(0, 0, 0);
   
-  cm=new chunkManager(blocks,p,3);
+  cm=new chunkManager(blocks,p,10);
   
   p.cm=cm;
   
@@ -74,12 +67,13 @@ void setup() {
   catch(AWTException e) {
     e.printStackTrace();
   }
+  cm.createChunkShape();
 }
 
 void draw() {
   background(255);
   
-  directionalLight(255,255,150, -0.5, 1, 0);
+  //directionalLight(255,255,200, -0.5, 1, -.1);
 
   camera(p.x, p.y-1, p.z, p.x-sin(p.lr)*cos(p.ud), p.y-1-sin(p.ud), p.z-cos(p.lr)*cos(p.ud), 0, 1, 0);
 
@@ -98,7 +92,7 @@ void draw() {
   noStroke();
   //stroke(0);
   noFill();
-  cm.render();
+  cm.renderShape();
   
   p.walk(im.getAngs());
 
