@@ -1,6 +1,8 @@
 /*
-- les chunks on maintenant chacun leurs PShape et sont translatés seulement lors d une update
-- en gros la meme version que la v0.8
+On est reparti de la v0.7 pour voir si ce qui ralentit tout quand on met un PShape par chunk c etait les appels multiples a texture
+apparement c'est pas le cas parce que meme avec un texture par face pour tout les chunks on as tjr 30 fps. Mais apres en interne PShape (enfin PShapeOpenGL plus exactement)
+il set la texture a chaque child d un group quand on applique une texture au group donc ca change rien. Donc soit il faut tout mettre dans un gros PShape comme en v0.7 mais ça va etre galere
+a loader a chaque modif du monde, ou alors on trouve un moyen de mofdifier les vertex direct dans le vbo du PShape mais c est galere un peu.
 */
 
 import java.awt.Robot;
@@ -32,7 +34,6 @@ void setup() {
   
   //textureMode(NORMAL);
   noSmooth();
-  hint(DISABLE_TEXTURE_MIPMAPS);
   
   frameRate(1000);
   noCursor();
@@ -114,8 +115,6 @@ boolean resettingMouse=false;
 void mouseMoved(MouseEvent e) {
   if (!resettingMouse) {
     p.lr=(p.lr-(mouseX-pmouseX)*sensi);//map(mouseX,0,width,-PI,PI);
-    if(p.lr>PI) p.lr-=TWO_PI;
-    if(p.lr<-PI) p.lr+=TWO_PI;
     p.ud=constrain(p.ud-(mouseY-pmouseY)*sensi,-HALF_PI,HALF_PI);//map(mouseY,height,0,-HALF_PI,HALF_PI);
   } else resettingMouse=false;
   if (mouseX<width/4||mouseX>width/4*3||mouseY<height/4||mouseY>height/4*3) {
