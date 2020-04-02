@@ -1,19 +1,5 @@
 /*
-- cleanup des fonctions inutiles
-- chunk : 
-  - ajout des posX/chunkX pour la position dans le monde/dans le tableau de chunk (*16)
-  - chaque chunk à son PShape qui est loadé dans son propre thread
-    => fonction createRenderShape pour generer le PShape
-    => ajout des variables isLoaded, isRendering et isRendered pour voir l'avancement du render par les autres threads
-    => ajout de la fonction startThread qui permet de demarrer le thread dee render
-    => ajout de la fonction renderShape pour creer le tableau de faces à render
-- chunkManager
-  => tout les chunks non remplis (bords du cercle d'affichage) auront l'id -1 dans le tableau chunkCoords
-  => on repart sur un translate au render (translater tout les PShape etait trop lent)
-  => ajout des fonction chunkLoadingFinished qui est activé par les chunks quand ils ont finis de loader/generer
-     et de la fonction tryToRender pour render le chunk si tout ses voisins sont loadés
-- leger changement dans le mouseMoved pour garder le lr et le ud du player dans l'intervalle [-PI;PI]
-- !!! Le code éxecuté dans les thread semble pour une raison inconnue bloquer l'execution du thread principal (je sais pas pk et sa me fait chier un peu, a etudier)
+- génération de terrain basique
 */
 
 import java.awt.Robot;
@@ -59,10 +45,6 @@ void setup() {
 
   p=new player();
   p.moveTo(0, 0, 0);
-  
-  cm=new chunkManager(blocks,p,10);
-  
-  p.cm=cm;
 
   im=new inputManager(p);
 
@@ -84,6 +66,13 @@ void setup() {
 }
 
 void draw() {
+  if(once){
+    cm=new chunkManager(blocks,p,10);
+    
+    p.cm=cm;
+    once=false;
+  }
+  
   background(255);
 
   //directionalLight(255,255,200, -0.5, 1, -.1);

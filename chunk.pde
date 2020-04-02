@@ -32,7 +32,6 @@ class chunk {
     cLoad=new chunkLoader(this);
   }
   
-  boolean onceFuckYou=false;
   void createRenderShape(int apx,int apy){
     renderShape=createShape(GROUP);
     for(int blockId=0;blockId<blocks.length;blockId++) for(int faceId=0;faceId<boxCoords.length;faceId++){
@@ -81,7 +80,12 @@ class chunk {
   }
 
   void generate(){
-    for(int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData.length; y++) for (int z=0; z<blocksData[0][0].length; z++) blocksData[x][y][z]=1;//(int)random(0,3);
+    for(int x=0; x<blocksData.length; x++) for (int z=0; z<blocksData[0][0].length; z++){
+      float noise=(float)ImprovedNoise.noise((px+x)/20.0,(py+z)/20.0,0.0)+1;
+      //println(noise);
+      int hgt=floor(noise*(blocksData[0].length/10));
+      for(int y=0;y<hgt;y++) blocksData[x][blocksData[0].length-y-1][z]=1;//(int)random(0,3);
+    }
     isLoaded.set(true);
   }
 
