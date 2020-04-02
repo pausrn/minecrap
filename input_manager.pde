@@ -3,8 +3,8 @@ Float[][] ang={
   new Float[]{HALF_PI,null},    //LEFT
   new Float[]{PI,null},         //BACKWARD
   new Float[]{-HALF_PI,null},   //RIGHT
-  new Float[]{null,HALF_PI},    //UP
-  new Float[]{null,-HALF_PI},   //DOWN
+  new Float[]{null,-HALF_PI},    //UP
+  new Float[]{null,HALF_PI},   //DOWN
 };
 
 int[] keyBinds={
@@ -20,6 +20,8 @@ class inputManager{
   player p;
   float[] angs=new float[2];
   int[] nbOfInp=new int[2];
+  
+  
   
   inputManager(player p){
     this.p=p;
