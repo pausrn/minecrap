@@ -1,13 +1,7 @@
 /*
-- changement des coordonnées des sommets du bloc pour avoir une orientation de textures constante
-- utilisation d'une texture globale par cube au lieu d'une texture par face
-- ajout d'une variable dans la class bloc pour le nom
-- les texture ne sont appeles qu une fois par type de bloc (i.e tout les blocks d un meme type sont consideres comme une shape)
-- suppression de la fonction "ray"
-- changement du mouvement de la camera
-- changement du mouvement dans l espace (support pour multi-touches)
-- les coordonnées de render sont maintenant les memes que les coordonnées de save (avant elles etaient *100) 
-  --> changement du champ de vue pour activer la vision des object proches (<0.1)
+- cleanup de toutes les lignes inutiles
+- debut de la class chunk manager (elle est quasi vide et sert a rien pour l instant)
+- en gros c est quasi la version 0.3
 */
 
 import java.awt.Robot;
@@ -19,7 +13,7 @@ import com.jogamp.newt.opengl.GLWindow;
 //PeasyCam cam;
 
 block[] blocks;
-chunck c;
+chunk c;
 
 player p;
 
@@ -35,13 +29,13 @@ final int UPWARD=105;
 final int DOWNWARD=106;
 
 void setup() {
-  //fullScreen(P3D);
-  size(500, 500, P3D);
+  fullScreen(P3D);
+  //size(500, 500, P3D);
   frameRate(1000);
   noCursor();
 
   blocks=loadBlocks("blocksData.json");
-  c=new chunck(blocks);
+  c=new chunk(blocks);
 
   PGraphicsOpenGL gl=((PGraphicsOpenGL)g);
   gl.textureSampling(3);
