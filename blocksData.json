@@ -1,11 +1,11 @@
 [
   {
-    "name":"air";
+    "name":"air",
   },
   {
-    "name":"dirt";
+    "name":"dirt",
   },
   {
-    "name":"stone";
+    "name":"stone",
   }
 ]

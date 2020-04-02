@@ -10,22 +10,52 @@ block[] loadBlocks(String jsonPath) {
   return out;
 }
 
-int[][] boxCoords={
+/*int[][] boxCoords={
   new int[]{0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1}, //south
   new int[]{1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1}, //est
   new int[]{0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0}, //north
   new int[]{0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1}, //west
   new int[]{0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0}, //top
   new int[]{0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0} //bottom
+};*/
+
+int[][] boxCoords={
+  new int[]{1,1,0, 0,1,0, 0,0,0, 1,0,0}, //south
+  new int[]{0,1,0, 0,1,1, 0,0,1, 0,0,0}, //est
+  new int[]{0,1,1, 1,1,1, 1,0,1, 0,0,1}, //north
+  new int[]{1,1,1, 1,1,0, 1,0,0, 1,0,1}, //west
+  new int[]{0,0,1, 1,0,1, 1,0,0, 0,0,0}, //top
+  new int[]{0,1,1, 1,1,1, 1,1,0, 0,1,0} //bottom
+};
+
+int[][] uvCoords={
+  new int[]{16,48},
+  new int[]{16,32},
+  new int[]{16,16},
+  new int[]{16,0},
+  new int[]{0,16},
+  new int[]{32,16},
+};
+
+int[][] coordsForMapping={
+  new int[]{0,1},
+  new int[]{2,1},
+  new int[]{0,1},
+  new int[]{2,1},
+  new int[]{0,2},
+  new int[]{0,2},
 };
 
 class block {
-  PImage up, sides, bottom;
+  PImage up, sides, bottom,merged;
+  String name;
 
   block(String name) {
     this.up=loadImage(name+"/top.png");
     this.sides=loadImage(name+"/sides.png");
     this.bottom=loadImage(name+"/bottom.png");
+    this.merged=loadImage(name+"/merged.png");
+    this.name=name;
   }
 
   void draw(int x,int y,int z,int[] facesToRender) {
@@ -33,29 +63,29 @@ class block {
     for (int i=0; i<facesToRender.length; i++) {
       int faceId=facesToRender[i];
       //pushMatrix();
-      beginShape(QUAD);
-      if (faceId<4) texture(this.sides);
+      /*if (faceId<4) texture(this.sides);
       else if (faceId==4) texture(this.bottom);
       else if (faceId==5) texture(this.up);
-      else texture(this.up);
+      else texture(this.up);*/
       int[] c=boxCoords[faceId];
       for (int j=0; j<c.length; j+=3) {
-        int jm=j/3;
-        vertex((x+c[j])*100,(y+c[j+1])*100,(z+c[j+2])*100,jm==0|jm==3?16:0,jm==1|jm==0?16:0);
+        //int jm=j/3;
+        //vertex((x+c[j])*100,(y+c[j+1])*100,(z+c[j+2])*100,uvCoords[i][0]+(jm==0|jm==3?16:0),uvCoords[i][1]+(jm==1|jm==0?16:0));
+        //vertex((x+c[j])*100,(y+c[j+1])*100,(z+c[j+2])*100,uvCoords[faceId][0]+16*c[j+coordsForMapping[faceId][0]],uvCoords[faceId][1]+16*c[j+coordsForMapping[faceId][1]]);
+        vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),uvCoords[faceId][0]+16*c[j+coordsForMapping[faceId][0]],uvCoords[faceId][1]+16*c[j+coordsForMapping[faceId][1]]);
       }
-      endShape();
       //popMatrix();
     }
   }
 }
 
 int[][] order={
-  new int[]{0,0,1},
-  new int[]{1,0,0},
   new int[]{0,0,-1},
   new int[]{-1,0,0},
-  new int[]{0,1,0},
-  new int[]{0,-1,0}
+  new int[]{0,0,1},
+  new int[]{1,0,0},
+  new int[]{0,-1,0},
+  new int[]{0,1,0}
 };
 
 class chunck {
@@ -72,14 +102,17 @@ class chunck {
     this.blocks=blocks;
   }
   void render(player p) {
+    for(int i=0;i<blocks.length-1;i++){
+    beginShape(QUADS);
+    texture(blocks[i].merged);
     for (int x=0; x<blocksData.length; x++) {
       //pushMatrix();
       for (int y=0; y<blocksData[0].length; y++) {
         //pushMatrix();
         for (int z=0; z<blocksData[0][0].length; z++) {
-          if(blocksData[x][y][z]!=0){
+          if(blocksData[x][y][z]==i+1){
             int[] faces=shouldRender(x, y, z,p);
-            blocks[blocksData[x][y][z]-1].draw(x,y,z,faces);
+            blocks[i/*blocksData[x][y][z]*/].draw(x,y,z,faces);
           }
           //translate(0, 0, 100);
         }
@@ -89,6 +122,8 @@ class chunck {
       //popMatrix();
       //translate(100, 0, 0);
     }
+    endShape();
+  }
   }
 
   int[] shouldRender(int ox, int oy, int oz,player p){
@@ -101,10 +136,10 @@ class chunck {
       int y=oy+order[i][1];
       int z=oz+order[i][2];
       if(!isIn(x,0,blocksData.length-1)||!isIn(y,0,blocksData[0].length-1)||!isIn(z,0,blocksData[0][0].length-1)||blocksData[x][y][z]==0){
-        if(rayToPlayer(ox,oy,oz,i,p)){
+        //if(rayToPlayer(ox,oy,oz,i,p)){
           tempFaces[ind]=i;
           ind++;
-        }
+        //}
       }
     }
     
