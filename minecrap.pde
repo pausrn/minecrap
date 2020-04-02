@@ -1,9 +1,7 @@
 /*
-- tout les chunks sont maintenant rassemblés dans un PShape
-  --> les class chunk et block permettent maintenant de render vers un PShape au lieu de la ffichage principal
-- on resepare les texture de chaques faces pour eviter le texture bleeding
-- changement de la facon dont le tableau renderBlock est stocké pour permettre d'iterer sur chaque face plutot que sur chaque block
-- 
+- l angle de la camera l/r est maintenant linmité entre -pi et pi
+- il y a un tableau de PShape dans le chunk manager pour chaque chunk (bof perf --)
+- changement du calcul de pour savoir si un chunk est dans le champ de vision (marche toujours pas de ouf)
 */
 
 import java.awt.Robot;
@@ -30,8 +28,8 @@ final int DOWNWARD=106;
 inputManager im;
 
 void setup() {
-  //fullScreen(P3D);
-  size(500, 500, P3D);
+  fullScreen(P3D);
+  //size(500, 500, P3D);
   
   //textureMode(NORMAL);
   noSmooth();
@@ -48,7 +46,7 @@ void setup() {
   p=new player();
   p.moveTo(0, 0, 0);
   
-  cm=new chunkManager(blocks,p,10);
+  cm=new chunkManager(blocks,p,5);
   
   p.cm=cm;
   
@@ -117,6 +115,8 @@ boolean resettingMouse=false;
 void mouseMoved(MouseEvent e) {
   if (!resettingMouse) {
     p.lr=(p.lr-(mouseX-pmouseX)*sensi);//map(mouseX,0,width,-PI,PI);
+    if(p.lr>PI) p.lr-=TWO_PI;
+    if(p.lr<-PI) p.lr+=TWO_PI;
     p.ud=constrain(p.ud-(mouseY-pmouseY)*sensi,-HALF_PI,HALF_PI);//map(mouseY,height,0,-HALF_PI,HALF_PI);
   } else resettingMouse=false;
   if (mouseX<width/4||mouseX>width/4*3||mouseY<height/4||mouseY>height/4*3) {
