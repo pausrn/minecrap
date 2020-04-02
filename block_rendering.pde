@@ -38,23 +38,6 @@ class block {
     tex[5]=loadImage(name+"/bottom.png");
     this.name=name;
   }
-
-  void draw(int x,int y,int z,int[] facesToRender) {
-    for (int i=0; i<facesToRender.length; i++) {
-      int faceId=facesToRender[i];
-      int[] c=boxCoords[faceId];
-      for (int j=0; j<c.length; j+=3) {
-        vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceId][0]]<<4,c[j+coordsForMapping[faceId][1]]<<4);
-      }
-    }
-  }
-  
-  void draw(int x,int y,int z,int faceToRender) {
-    int[] c=boxCoords[faceToRender];
-    for (int j=0; j<c.length; j+=3) {
-      vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceToRender][0]]<<4,c[j+coordsForMapping[faceToRender][1]]<<4);
-    }
-  }
   
   void draw(int x,int y,int z,int faceToRender,PShape shape) {
     int[] c=boxCoords[faceToRender];
@@ -80,6 +63,7 @@ class chunk {
   chunkLoader cLoad;
   Thread loadThread;
   int px,py;
+  PShape renderShape;
 
   chunk(block[] blocks,int px,int py) {
     this.blocks=blocks;
@@ -89,31 +73,19 @@ class chunk {
     cLoad=new chunkLoader(this);
   }
   
-  void render(int apx,int apy){
-    for(int i=0;i<blocks.length-1;i++){
-      beginShape(QUADS);
-      for(int k=0;k<6;k++){
-        texture(blocks[i].tex[0]);
-        for(int j=0;j<renderBlocks[i][k].length;j++){
-          int[] pos=renderBlocks[i][k][j];
-          blocks[i].draw(pos[0]+px+apx,pos[1],pos[2]+py+apy,new int[]{k}/*renderBlocks[i][j][1]*/);
-        }
+  void createRenderShape(int apx,int apy){
+    renderShape=createShape(GROUP);
+    renderShape.disableStyle();
+    for(int blockId=0;blockId<blocks.length;blockId++) for(int faceId=0;faceId<boxCoords.length;faceId++){
+      PShape cchunk=createShape();
+      cchunk.setTexture(blocks[blockId].tex[faceId]);
+      cchunk.beginShape(QUADS);
+      for(int j=0;j<renderBlocks[blockId][faceId].length;j++){
+        int[] pos=renderBlocks[blockId][faceId][j];
+        blocks[blockId].draw(pos[0]+px+apx,pos[1],pos[2]+py+apy,faceId,cchunk);
       }
-      endShape();
-    }
-  }
-  
-  void render(int apx,int apy,int blockId,int faceId){
-    for(int j=0;j<renderBlocks[blockId][faceId].length;j++){
-      int[] pos=renderBlocks[blockId][faceId][j];
-      blocks[blockId].draw(pos[0]+px+apx,pos[1],pos[2]+py+apy,faceId);
-    }
-  }
-  
-  void render(int apx,int apy,int blockId,int faceId,PShape shape){
-    for(int j=0;j<renderBlocks[blockId][faceId].length;j++){
-      int[] pos=renderBlocks[blockId][faceId][j];
-      blocks[blockId].draw(pos[0]+px+apx,pos[1],pos[2]+py+apy,faceId,shape);
+      cchunk.endShape();
+      renderShape.addChild(cchunk);
     }
   }
 
@@ -133,7 +105,6 @@ class chunk {
     
     int[] facesToRender=new int[ind];
     arrayCopy(tempFaces,facesToRender,ind);
-    //for(int i=0;i<ind;i++) facesToRender[i]=tempFaces[i];
     
     return facesToRender;
   }
@@ -167,7 +138,6 @@ class chunkManager{
   int[][] chunkCoords;
   int renderDist=3;
   int px,py;
-  PShape[] chunkShapes;
   
   chunkManager(block[] blocks,player p,int rd){
     this.blocks=blocks;
@@ -179,7 +149,6 @@ class chunkManager{
     int area=0;
     for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist) area++;
     chunk=new chunk[area];
-    chunkShapes=new PShape[area];
     chunkCoords=new int[2*rd][2*rd];
     int ind=0;
     for(int x=-renderDist;x<renderDist;x++) for(int y=-renderDist;y<renderDist;y++) if(abs(x+0.5)<sqrt(1-sq((float)(y+0.5)/renderDist))*renderDist){
@@ -191,70 +160,24 @@ class chunkManager{
     }
   }
   
-  void render(){
-    for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
-      chunk cc=chunk[chunkCoords[x][y]];
-      /*if(isInView(cc))*/ cc.render(px<<4,py<<4);
-    }
-  }
-  
-  void renderAll(){
-    for(int blockId=0;blockId<blocks.length;blockId++){
-      for(int faceId=0;faceId<boxCoords.length;faceId++){
-        beginShape(QUADS);
-        texture(blocks[blockId].tex[faceId]);
-        for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
-          chunk cc=chunk[chunkCoords[x][y]];
-          /*if(isInView(cc))*/ cc.render(px<<4,py<<4,blockId,faceId);
-        }
-        endShape();
-      }
-    }
-  }
-  
   void createChunkShape(){
     for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
       int ind=chunkCoords[x][y];
       chunk cc=chunk[ind];
-      chunkShapes[ind]=createShape(GROUP);
-      chunkShapes[ind].disableStyle();
-      for(int blockId=0;blockId<blocks.length;blockId++) for(int faceId=0;faceId<boxCoords.length;faceId++){
-        PShape cchunk=createShape();
-        cchunk.setTexture(blocks[blockId].tex[faceId]);
-        cchunk.beginShape(QUADS);
-        cc.render(px<<4,py<<4,blockId,faceId,cchunk);
-        cchunk.endShape();
-        chunkShapes[ind].addChild(cchunk);
-      }
+      cc.createRenderShape(px,py);
+      //tot.addChild(cc.renderShape);
     }
-    
-    /*chunkShape=createShape(GROUP);
-    chunkShape.disableStyle();
-    
-    for(int blockId=0;blockId<blocks.length;blockId++){
-      for(int faceId=0;faceId<boxCoords.length;faceId++){
-        PShape cchunk=createShape();
-        cchunk.setTexture(blocks[blockId].tex[faceId]);
-        cchunk.beginShape(QUADS);
-        for(int x=0;x<chunkCoords.length;x++) for(int y=0;y<chunkCoords[0].length;y++){
-          chunk cc=chunk[chunkCoords[x][y]];
-          cc.render(px<<4,py<<4,blockId,faceId,cchunk);
-        }
-        cchunk.endShape();
-        chunkShape.addChild(cchunk);
-      }
-    }*/
   }
   
   void renderShape(){
-    translate(px<<4,0,py<<4);
-    for(int i=0;i<chunkShapes.length;i++) if(isInView(chunk[i])) shape(chunkShapes[i]);
+    for(int i=0;i<chunk.length;i++) shape(chunk[i].renderShape);
   }
   
   void updateChunk(){
     int cx=floor(p.x)>>4;
     int cy=floor(p.z)>>4;
     if(cx!=px||cy!=py){
+      for(int i=0;i<chunk.length;i++) chunk[i].renderShape.translate((cx-px)<<4,0,(cy-py)<<4);
       px=cx;
       py=cy;
     }
