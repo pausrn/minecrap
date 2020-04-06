@@ -1,12 +1,5 @@
 /*
-- changement du sens des coordonnées en y pour etre en accord avec la camera (y positif vers le haut)
-- le tableau renderBlock est maintenant créer seulement lors de la création du shape pour gagner un peu de ram (on devrat peut etre le rechanger plus tard)
-- génération de monde infini :
-  - ajout de la fonction copyFrom et d'un nouveau constructeur dans la class chunk pour permettre de bouger les chunks qui sont affichés
-  - réinitialisation des variables isLoaded, isrendering et isRendered lors du lancement d'un thread pour permettre de relancer un thread d un chunk déjà loadé
-  - suppression du translate dans le renderShape, les chunks sont generés avec les bonnes coords
-  - amelioration de la fonction updateChunk dans la class chunkManager pour shifter les chunks et génerer les nouveaux
-- leger changement du mouvement de la camera avec la souris pour eviter le bug qui fait voir le ciel si on regarde a ses pieds
+
 */
 
 import java.awt.Robot;
@@ -24,10 +17,8 @@ float sensi=0.01;
 
 inputManager im;
 
-boolean once=true;
-
 void setup() {
-  fullScreen(P3D);
+  fullScreen(P3D,2);
   //size(500, 500, P3D);
 
   frameRate(1000);
