@@ -9,6 +9,7 @@ class chunkManager{
   int px,py;
   chunkLoader load;
   Thread loadThread;
+  ConcurrentLinkedQueue<Integer[]> chunksToRender=new ConcurrentLinkedQueue<Integer[]>();
   
   chunkManager(block[] blocks,player p,int rd){
     this.blocks=blocks;
@@ -33,7 +34,7 @@ class chunkManager{
     }
     else chunkCoords[x+rd][y+rd]=-1;
     
-    startChunkRender();
+    startChunkGeneration();
   }
 
   void renderShape(){
@@ -46,14 +47,11 @@ class chunkManager{
     int cx=floor(p.x/16);
     int cy=floor(p.z/16);
     if(cx!=px||cy!=py){
-      //for(int i=0;i<chunk.length;i++) chunk[i].renderShape.translate((cx-px)*16,0,(cy-py)*16);
       int depX=cx-px;
       int depY=cy-py;
       
       px=cx;
       py=cy;
-      
-      println(depX,depY);
       
       int[] chunkRequests=new int[chunk.length];
       int[] chunkToRender=new int[0];
@@ -94,11 +92,11 @@ class chunkManager{
         chunk[ind].moveTo(depX,depY);
         load.addToQueue(ind);
       }
-      startChunkRender();
+      startChunkGeneration();
     }
   }
   
-  void startChunkRender(){
+  void startChunkGeneration(){
     if(loadThread==null||!loadThread.isAlive()){
       loadThread=new Thread(load);
       loadThread.start();
@@ -106,10 +104,17 @@ class chunkManager{
   }
   
   void generateAndRender(){
-    while(!load.chunksToRender.isEmpty()){
-      int ind=load.chunksToRender.poll();
-      chunk[ind].generate();
-      chunkLoadingFinished(chunk[ind]);
+    while(!load.chunksToGenerate.isEmpty()){
+      Integer[] data=load.chunksToGenerate.poll();
+      int ind=data[0];
+      int posX=chunk[ind].chunkX-(px-data[1]);
+      int posY=chunk[ind].chunkY-(py-data[2]);
+      
+      int nInd=getChunkIndex(posX,posY);
+      if(nInd!=-1){
+        chunk[nInd].generate();
+        chunkLoadingFinished(chunk[nInd]);
+      }
     }
   }
 
@@ -142,7 +147,22 @@ class chunkManager{
       }
     }
     if(adjChunkLoaded){
-      chunk[chunkIndex].renderShape();
+      chunk[chunkIndex].computeFacesToRender();
+      chunksToRender.add(new Integer[]{chunkIndex,px,py});
+    }
+  }
+  
+  void renderChunk(){
+    if(!chunksToRender.isEmpty()){
+      Integer[] data=chunksToRender.poll();
+      int ind=data[0];
+      int posX=chunk[ind].chunkX-(px-data[1]);
+      int posY=chunk[ind].chunkY-(py-data[2]);
+      
+      int nInd=getChunkIndex(posX,posY);
+      if(nInd!=-1){
+        chunk[nInd].createRenderShape();
+      }
     }
   }
 
@@ -163,23 +183,29 @@ class chunkManager{
 
 class chunkLoader implements Runnable{
   chunkManager cm;
-  ConcurrentLinkedQueue<Integer> chunksToRender=new ConcurrentLinkedQueue<Integer>();
+  ConcurrentLinkedQueue<Integer[]> chunksToGenerate=new ConcurrentLinkedQueue<Integer[]>();
   
   chunkLoader(chunkManager cm){
     this.cm=cm;
   }
   
   void setQueue(int[] chunks){
-    chunksToRender=new ConcurrentLinkedQueue<Integer>();
-    for(int i=0;i<chunks.length;i++) chunksToRender.add(chunks[i]);
+    chunksToGenerate=new ConcurrentLinkedQueue<Integer[]>();
+    int offX=cm.px;
+    int offY=cm.py;
+    for(int i=0;i<chunks.length;i++) chunksToGenerate.add(new Integer[]{chunks[i],offX,offY});
   }
   
   void addToQueue(int[] chunks){
-    for(int i=0;i<chunks.length;i++) chunksToRender.add(chunks[i]);
+    int offX=cm.px;
+    int offY=cm.py;
+    for(int i=0;i<chunks.length;i++) chunksToGenerate.add(new Integer[]{chunks[i],offX,offY});
   }
   
   void addToQueue(int chunk){
-    chunksToRender.add(chunk);
+    int offX=cm.px;
+    int offY=cm.py;
+    chunksToGenerate.add(new Integer[]{chunk,offX,offY});
   }
   
   void run(){

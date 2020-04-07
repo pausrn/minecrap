@@ -55,6 +55,7 @@ void setup() {
 
 void draw() {
   background(255);
+  cm.renderChunk();
 
   camera(p.x, -p.y-1, p.z, p.x-sin(p.lr)*cos(p.ud), -p.y-1-sin(p.ud), p.z-cos(p.lr)*cos(p.ud), 0, 1, 0);
 

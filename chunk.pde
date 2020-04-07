@@ -14,6 +14,7 @@ class chunk {
   int px,py,chunkX,chunkY;
   PShape renderShape;
   chunkManager cm;
+  int[][][][] renderBlocks;
   boolean isLoaded=false,isRendered=false;
 
   chunk(chunkManager cm,block[] blocks,int chunkX,int chunkY) {
@@ -23,6 +24,7 @@ class chunk {
     this.chunkY=chunkY;
     this.px=chunkX*16;
     this.py=chunkY*16;
+    renderBlocks=new int[blocks.length][boxCoords.length][0][3];
   }
   
   chunk(chunkManager cm,block[] blocks,int chunkX,int chunkY,int px,int py) {
@@ -32,6 +34,7 @@ class chunk {
     this.chunkY=chunkY;
     this.px=px;
     this.py=py;
+    renderBlocks=new int[blocks.length][boxCoords.length][0][3];
   }
   
   void copyFrom(chunk c){
@@ -39,6 +42,8 @@ class chunk {
     this.py=c.py;
     this.blocksData=c.blocksData;
     this.renderShape=c.renderShape;
+    this.isRendered=c.isRendered;
+    this.renderBlocks=c.renderBlocks;
   }
   
   void moveTo(int x,int y){
@@ -46,7 +51,7 @@ class chunk {
     this.py+=y*16;
   }
   
-  void createRenderShape(int[][][][] renderBlocks){
+  void createRenderShape(){
     renderShape=createShape(GROUP);
     for(int blockId=0;blockId<blocks.length;blockId++) for(int faceId=0;faceId<boxCoords.length;faceId++){
       PShape cchunk=createShape();
@@ -94,13 +99,11 @@ class chunk {
     isLoaded=true;
   }
 
-  void renderShape(){
+  void computeFacesToRender(){
     isRendered=false;
-    int[][][][] renderBlocks=new int[blocks.length][boxCoords.length][0][3];
     for(int x=0; x<blocksData.length; x++) for (int y=0; y<blocksData[0].length; y++) for (int z=0; z<blocksData[0][0].length; z++) if(blocksData[x][y][z]!=0){
       int[] faces=shouldRender(x,y,z);
       for(int i=0;i<faces.length;i++) renderBlocks[blocksData[x][y][z]-1][faces[i]]=(int[][])append(renderBlocks[blocksData[x][y][z]-1][faces[i]],new int[]{x,y,z});
     }
-    createRenderShape(renderBlocks);
   }
 }
