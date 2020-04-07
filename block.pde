@@ -42,7 +42,7 @@ class block {
   void draw(int x,int y,int z,int faceToRender,PShape shape) {
     int[] c=boxCoords[faceToRender];
     for (int j=0; j<c.length; j+=3) {
-      shape.vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceToRender][0]]<<4,c[j+coordsForMapping[faceToRender][1]]<<4);
+      shape.vertex((x+c[j]),(y+c[j+1]),(z+c[j+2]),c[j+coordsForMapping[faceToRender][0]]*16,c[j+coordsForMapping[faceToRender][1]]*16);
     }
   }
 }
